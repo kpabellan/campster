@@ -24,7 +24,7 @@ Proxies are required to reduce the likelihood of hitting rate limits on the API.
 
 You need to provide some personal information for this program to run. All information is stored locally on your machine.
 
-1. Open the `config.js` file.
+1. Open the `src/config.js` file.
 2. Enter the required information in the appropriate fields.
 3. To get the `campgroundId`, navigate to the campground page on [recreation.gov](https://www.recreation.gov/). The URL will look like `https://www.recreation.gov/camping/campgrounds/123456`. The "123456" part of the URL is the `campgroundId` for that campground.
 4. The `campgroundName` can be any string and is mainly used for logs. It's recommended to use the actual name of the campground to make alerts and logs more readable.
