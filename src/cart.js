@@ -54,7 +54,7 @@ async function cart(siteId, date, campgroundName) {
     await page.type('#email', config.profile.email);
 
     await page.waitForSelector('#rec-acct-sign-in-password');
-    await page.type('#rec-acct-sign-in-password', config.profile.email);
+    await page.type('#rec-acct-sign-in-password', config.profile.password);
 
     await page.waitForSelector('.sarsa-button-content');
 
