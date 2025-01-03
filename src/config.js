@@ -20,6 +20,7 @@ const config = {
       "startDate": "2024-09-11"
     }
   ],
+  "proxies": 1, // Set to 0 to disable proxies (not recommended)
   "discordWebhook": "" // Discord webhook (optional)
 };
 

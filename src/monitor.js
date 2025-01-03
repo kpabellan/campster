@@ -4,7 +4,11 @@ const { cart } = require('./cart');
 const config = require('./config');
 const { sendWebhook, formatDate } = require('./helper');
 
-const proxyList = fs.readFileSync('proxylist.txt', 'utf-8').split('\n').filter(Boolean);
+let proxyList = [];
+if (config.proxies == 1) {
+  proxyList = fs.readFileSync('proxylist.txt', 'utf-8').split('\n').map(proxy => proxy.trim()).filter(Boolean);
+}
+
 const userAgents = fs.readFileSync('useragents.txt', 'utf-8').split('\n').map(agent => agent.trim().replace(/[^\x20-\x7E]/g, '')).filter(Boolean); // Split new line, remove invalid characters, and remove empty strings
 
 const cartedItems = new Map();
@@ -33,26 +37,28 @@ function clearExpiredCartedItems() {
 function monitor(campgroundId, campgroundName, startDate) {
   clearExpiredCartedItems();
 
-  const proxy = getRandomProxy();
   const userAgent = getRandomUserAgent();
+  let proxyConfig = null;
+
+  if (config.proxies == 1) {
+    const proxy = getRandomProxy();
+    const [host, port] = proxy.split(':');
+    proxyConfig = { host, port: parseInt(port), protocol: 'http' };
+  }
 
   const year = startDate.split('-')[0];
   const month = startDate.split('-')[1];
 
   const start_date = `${year}-${month}-01T00:00:00.000Z`;
 
-  let axiosConfig  = {
+  const axiosConfig = {
     method: 'get',
     maxBodyLength: Infinity,
     url: `https://www.recreation.gov/api/camps/availability/campground/${campgroundId}/month?start_date=${encodeURIComponent(start_date)}`,
-    proxy: {
-      host: proxy.split(':')[0],
-      port: proxy.split(':')[1],
-      protocol: 'http',
-    },
     headers: {
       'User-Agent': userAgent
-    }
+    },
+    ...(proxyConfig && { proxy: proxyConfig })
   };
 
   axios.request(axiosConfig)
