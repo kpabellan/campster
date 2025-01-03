@@ -15,10 +15,12 @@ Campster is a campsite reservation helper that monitors and secures available ca
 
 ### Proxies
 
-Proxies are required to reduce the likelihood of hitting rate limits on the API.
+Proxies are used to reduce the likelihood of hitting rate limits on the API.
 
-1. Open the `proxylist.txt` file in the main folder.
+1. Open the proxylist.txt file in the main folder.
 2. Enter your proxies, each on a new line.
+3. In the src/config.js file, make sure the proxies field is set to 1 to enable proxy usage.
+4. If you set proxies to 0, the program will not use proxies. This is not recommended for prolonged use as it increases the risk of being rate-limited or blocked.
 
 ### User Information
 
