@@ -105,7 +105,7 @@ function monitor(campgroundId, campgroundName, startDate) {
       }
     })
     .catch((e) => {
-      console.log('Error' + e);
+      console.log('Error: ' + e);
     });
 }
 
