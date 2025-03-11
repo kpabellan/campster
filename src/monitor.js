@@ -14,6 +14,9 @@ const userAgents = fs.readFileSync('useragents.txt', 'utf-8').split('\n').map(ag
 const cartedItems = new Map();
 const cartTimeout = 10 * 60 * 1000;
 
+const monitorTimout = 15 * 60 * 1000;
+let campsiteCarted = false;
+
 function getRandomProxy() {
   const randomIndex = Math.floor(Math.random() * proxyList.length);
   return proxyList[randomIndex];
@@ -35,6 +38,10 @@ function clearExpiredCartedItems() {
 }
 
 function monitor(campgroundId, campgroundName, startDate) {
+  if (campsiteCarted) {
+    return;
+  }
+
   clearExpiredCartedItems();
 
   const userAgent = getRandomUserAgent();
@@ -73,16 +80,25 @@ function monitor(campgroundId, campgroundName, startDate) {
           const formattedDate = formatDate(date);
 
           if (availabilities[date] === "Available" && !cartedItems.has(itemKey)) {
-            console.log(`${campgroundName} is available on ${formattedDate}`);
 
             if (date === startDate + 'T00:00:00Z') {
- 
+              console.log(`${campgroundName} is available on ${formattedDate}`);
+
               if (config.discordWebhook) {
                 sendWebhook(`${campgroundName} is available on ${formattedDate} - <https://www.recreation.gov/camping/campsites/${campsiteId}>`);
               }
 
               cart(campsiteId, date, campgroundName);
               cartedItems.set(itemKey, Date.now());
+
+              campsiteCarted = true;
+
+              setTimeout(() => {
+                campsiteCarted = false;
+                console.log('Resuming monitoring after 15 minutes...');
+              }, monitorTimout);
+
+              return;
             }
           }
         }
@@ -94,6 +110,10 @@ function monitor(campgroundId, campgroundName, startDate) {
 }
 
 function mainMonitor() {
+  if (campsiteCarted) {
+    return;
+  }
+
   for (let i = 0; i < config.campsites.length; i++) {
     monitor(config.campsites[i].campgroundId, config.campsites[i].campgroundName, config.campsites[i].startDate);
   }
