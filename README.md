@@ -53,6 +53,8 @@ To start the program, open a terminal and run these commands:
 
 The checkout process is **NOT** automated. The program adds the campsite to the cart, giving you 15 minutes to manually modify and input your information to complete the checkout.
 
+Due to this limitation, it is recommended that you set up a Discord webhook to receive alerts when a campsite has been successfully added to your cart. This way, you can be notified immediately and complete the reservation before the time expires.
+
 ## Disclaimer and Liability Notice
 
 **This project is for educational and research purposes only.** Using this code for scraping, crawling, or automating interactions with websites may violate the Terms of Service of those websites and could result in legal consequences. By using this code, you agree to comply with all relevant terms, policies, and laws.
