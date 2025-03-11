@@ -20,6 +20,26 @@ async function connectToExistingBrowser() {
   return browser;
 }
 
+async function checkProceedButton(page) {
+  try {
+    await page.waitForSelector('.sarsa-button-content', { timeout: 1000 });
+
+    await page.evaluate(() => {
+      const elements = document.querySelectorAll('.sarsa-button-content');
+      for (let element of elements) {
+        if (element.innerText.trim() === 'Proceed with Reservation') {
+          element.click();
+          break;
+        }
+      }
+    });
+
+    await delay(3000);
+  } catch (error) {
+    // "Proceed with Reservation" button not found
+  }
+}
+
 async function cart(siteId, date, campgroundName) {
   const browser = await connectToExistingBrowser();
   const page = await browser.newPage();
@@ -49,6 +69,8 @@ async function cart(siteId, date, campgroundName) {
     // Error adding campsite to cart
   }
 
+  await checkProceedButton(page);
+
   try {
     await page.waitForSelector('#email', { timeout: 1000 });
     await page.type('#email', config.profile.email);
@@ -67,26 +89,34 @@ async function cart(siteId, date, campgroundName) {
         }
       }
     });
+
+    await checkProceedButton(page);
+
+    try {
+      await page.waitForSelector('#add-cart-campsite', { timeout: 1500 });
+      await page.$eval('#add-cart-campsite', el => el.click());
+    } catch (error) {
+      console.log(error);
+    }
   } catch (error) {
     // Already logged in
   }
 
   try {
-    await page.waitForSelector('#add-cart-campsite', { timeout: 1500 });
-    const button = await page.$('#add-cart-campsite');
-
-    if (button) {
-      await button.click();
-
+    await delay(1000);
+  
+    const currentUrl = page.url();
+    if (currentUrl.includes('orderdetails')) {
       console.log(`Reserved ${campgroundName} for ${formattedDate}.`);
-
+  
       if (config.discordWebhook) {
         sendWebhook(`Reserved ${campgroundName} for ${formattedDate} - Finish checkout at <https://www.recreation.gov/cart>`);
       }
+    } else {
+      console.log('Failed to reach the order details page.');
     }
   } catch (error) {
-    console.log(error);
-    // Proceed to checkout
+    console.log('Error:', error.message);
   }
 
   await delay(3000);
