@@ -79,7 +79,7 @@ function monitor(campgroundId, campgroundName, startDate) {
           const itemKey = `${campsiteId}-${date}`;
           const formattedDate = formatDate(date);
 
-          if (availabilities[date] === "Available" && !cartedItems.has(itemKey)) {
+          if ((availabilities[date] === "Available" || availabilities[date] == "Open") && !cartedItems.has(itemKey)) {
 
             if (date === startDate + 'T00:00:00Z') {
               console.log(`${campgroundName} is available on ${formattedDate}`);
