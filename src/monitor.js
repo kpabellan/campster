@@ -4,12 +4,29 @@ const { cart } = require('./cart');
 const config = require('./config');
 const { sendWebhook, formatDate } = require('./helper');
 
-let proxyList = [];
-if (config.proxies == 1) {
-  proxyList = fs.readFileSync('proxylist.txt', 'utf-8').split('\n').map(proxy => proxy.trim()).filter(Boolean);
+function readListFile(filename) {
+  if (!fs.existsSync(filename)) {
+    console.error(`Required file "${filename}" was not found in ${process.cwd()}. Create it and try again.`);
+    process.exit(1);
+  }
+  return fs.readFileSync(filename, 'utf-8');
 }
 
-const userAgents = fs.readFileSync('useragents.txt', 'utf-8').split('\n').map(agent => agent.trim().replace(/[^\x20-\x7E]/g, '')).filter(Boolean); // Split new line, remove invalid characters, and remove empty strings
+let proxyList = [];
+if (config.proxies == 1) {
+  proxyList = readListFile('proxylist.txt').split('\n').map(proxy => proxy.trim()).filter(Boolean);
+  if (proxyList.length === 0) {
+    console.error('Proxies are enabled (config.proxies = 1) but "proxylist.txt" is empty. Add proxies or set config.proxies to 0.');
+    process.exit(1);
+  }
+}
+
+const userAgents = readListFile('useragents.txt').split('\n').map(agent => agent.trim().replace(/[^\x20-\x7E]/g, '')).filter(Boolean); // Split new line, remove invalid characters, and remove empty strings
+
+if (userAgents.length === 0) {
+  console.error('"useragents.txt" is empty. Add at least one user agent string.');
+  process.exit(1);
+}
 
 const cartedItems = new Map();
 const cartTimeout = 10 * 60 * 1000;
@@ -88,15 +105,21 @@ function monitor(campgroundId, campgroundName, startDate) {
                 sendWebhook(`${campgroundName} is available on ${formattedDate} - <https://www.recreation.gov/camping/campsites/${campsiteId}>`);
               }
 
-              cart(campsiteId, date, campgroundName);
               cartedItems.set(itemKey, Date.now());
-
               campsiteCarted = true;
 
-              setTimeout(() => {
+              const resumeTimer = setTimeout(() => {
                 campsiteCarted = false;
                 console.log('Resuming monitoring after 15 minutes...');
               }, monitorTimout);
+
+              cart(campsiteId, date, campgroundName).catch((e) => {
+                // Carting failed (e.g. Chrome debugger not reachable). Resume monitoring
+                // immediately instead of staying paused for the full 15 minutes.
+                console.log('Carting failed: ' + e.message);
+                clearTimeout(resumeTimer);
+                campsiteCarted = false;
+              });
 
               return;
             }

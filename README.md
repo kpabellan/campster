@@ -8,10 +8,21 @@ Campster is a campsite reservation helper that monitors and secures available ca
 
 1. **Node.js Installation**: Ensure Node.js is installed on your system. You can download it [here](https://nodejs.org/en/download/package-manager).
    
-2. **Browser Access**: This project uses Puppeteer to automate actions and requires access to your browser. You must keep the browser window open while the program is running. To set this up, change the Google Chrome properties target to:  
-   `"C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222`.
+2. **Browser Access**: This project uses Puppeteer to automate actions by connecting to an already-running Chrome instance over the remote debugging port. You must keep that Chrome window open while the program is running.
 
-3. **Verify Setup**: Open Google Chrome and go to [http://127.0.0.1:9222/json/version](http://127.0.0.1:9222/json/version). If you see information regarding your browser, the setup is complete.
+   **Fully close all existing Chrome windows first.** If any Chrome process is already running, a new launch just opens a tab in the existing process and ignores the flags below. On Windows you can force this with `taskkill /F /IM chrome.exe`.
+
+   Then launch Chrome with **both** flags:
+
+   ```sh
+   "C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 --user-data-dir="C:\ChromeDebug"
+   ```
+
+   > **Note:** Since Chrome 136, `--remote-debugging-port` is silently ignored unless you also pass a non-default `--user-data-dir`. The path above (`C:\ChromeDebug`) is a fresh, isolated profile — Chrome creates it automatically. Because it's a new profile you'll be signed out, so **sign in to recreation.gov once** in that window before running the program. (If you'd rather reuse your normal logins, point `--user-data-dir` at your real profile root, e.g. `C:\Users\<you>\AppData\Local\Google\Chrome\User Data`, but then no other Chrome window can be open using that profile.)
+
+   You can save the command as a desktop shortcut: right-click the shortcut → Properties → set the **Target** to the full command above.
+
+3. **Verify Setup**: In that Chrome window, go to [http://127.0.0.1:9222/json/version](http://127.0.0.1:9222/json/version). If you see JSON information about your browser, the setup is complete. If the page fails to connect, the debugging port isn't open — recheck the steps above.
 
 ### Proxies
 
@@ -24,10 +35,10 @@ Proxies are used to reduce the likelihood of hitting rate limits on the API.
 
 ### User Information
 
-You need to provide some personal information for this program to run. All information is stored locally on your machine.
+You need to provide some personal information for this program to run. All information is stored locally on your machine — `src/config.js` is gitignored so your credentials are never committed.
 
-1. Open the `src/config.js` file.
-2. Enter the required information in the appropriate fields.
+1. Copy `src/config.example.js` to `src/config.js`.
+2. Open `src/config.js` and enter the required information in the appropriate fields.
 3. To get the `campgroundId`, navigate to the campground page on [recreation.gov](https://www.recreation.gov/). The URL will look like `https://www.recreation.gov/camping/campgrounds/123456`. The "123456" part of the URL is the `campgroundId` for that campground.
 4. The `campgroundName` can be any string and is mainly used for logs. It's recommended to use the actual name of the campground to make alerts and logs more readable.
 5. The `startDate` should be in the format `YYYY-MM-DD` and represents the day you plan to reserve. The program will automatically reserve all available days starting from the `startDate`. You can modify these dates once the campground is in the cart.
