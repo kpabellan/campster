@@ -21,6 +21,10 @@ const config = {
     }
   ],
   "proxies": 1, // Set to 0 to disable proxies (not recommended)
+  "proxyAuth": { // Shared credentials for proxies that require authentication (leave blank if none, or if creds are embedded per-line in proxylist.txt as host:port:user:pass)
+    "username": "",
+    "password": ""
+  },
   "discordWebhook": "" // Discord webhook (optional)
 };
 

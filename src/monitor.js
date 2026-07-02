@@ -44,6 +44,28 @@ function getRandomUserAgent() {
   return userAgents[randomIndex];
 }
 
+function buildProxyConfig() {
+  if (config.proxies != 1) {
+    return null;
+  }
+  const proxy = getRandomProxy();
+  // Support both "host:port" and per-proxy "host:port:user:pass" formats.
+  const [host, port, user, pass] = proxy.split(':');
+  const proxyConfig = { host, port: parseInt(port), protocol: 'http' };
+
+  if (user && pass) {
+    // Credentials embedded in the proxy line.
+    proxyConfig.auth = { username: user, password: pass };
+  } else if (config.proxyAuth && config.proxyAuth.username) {
+    // Shared credentials for all proxies, kept in config.js (gitignored).
+    proxyConfig.auth = { username: config.proxyAuth.username, password: config.proxyAuth.password };
+  }
+  return proxyConfig;
+}
+
+// How many times to retry a request that gets rate-limited (429), each time with a fresh proxy.
+const maxRetries = 3;
+
 function clearExpiredCartedItems() {
   const now = Date.now();
   for (const [itemKey, timestamp] of cartedItems.entries()) {
@@ -54,39 +76,37 @@ function clearExpiredCartedItems() {
   }
 }
 
-function monitor(campgroundId, campgroundName, startDate) {
+function monitor(campgroundId, campgroundName, startDate, retryCount = 0) {
   if (campsiteCarted) {
     return;
   }
 
   clearExpiredCartedItems();
 
-  const userAgent = getRandomUserAgent();
-  let proxyConfig = null;
-
-  if (config.proxies == 1) {
-    const proxy = getRandomProxy();
-    const [host, port] = proxy.split(':');
-    proxyConfig = { host, port: parseInt(port), protocol: 'http' };
-  }
-
   const year = startDate.split('-')[0];
   const month = startDate.split('-')[1];
 
   const start_date = `${year}-${month}-01T00:00:00.000Z`;
+
+  const proxyConfig = buildProxyConfig();
 
   const axiosConfig = {
     method: 'get',
     maxBodyLength: Infinity,
     url: `https://www.recreation.gov/api/camps/availability/campground/${campgroundId}/month?start_date=${encodeURIComponent(start_date)}`,
     headers: {
-      'User-Agent': userAgent
+      'User-Agent': getRandomUserAgent()
     },
     ...(proxyConfig && { proxy: proxyConfig })
   };
 
+  const requestLabel = `${campgroundName} (${campgroundId}) for ${month}/${year}` +
+    (proxyConfig ? ` via proxy ${proxyConfig.host}:${proxyConfig.port}` : ' (no proxy)');
+  console.log(`[${new Date().toISOString()}] Requesting availability: ${requestLabel}`);
+
   axios.request(axiosConfig)
     .then((response) => {
+      console.log(`[${new Date().toISOString()}] Response ${response.status} for ${requestLabel}`);
       const campsites = response.data.campsites;
 
       for (const campsiteId in campsites) {
@@ -128,7 +148,14 @@ function monitor(campgroundId, campgroundName, startDate) {
       }
     })
     .catch((e) => {
-      console.log('Error: ' + e);
+      const status = e.response ? `HTTP ${e.response.status}` : (e.code || 'no response');
+      console.log(`[${new Date().toISOString()}] Request failed (${status}) for ${requestLabel}: ${e.message}`);
+
+      // 429 = rate-limited on that proxy IP. Retry with a fresh proxy instead of losing the cycle.
+      if (e.response && e.response.status === 429 && retryCount < maxRetries) {
+        console.log(`[${new Date().toISOString()}] Retrying (${retryCount + 1}/${maxRetries}) with a different proxy...`);
+        monitor(campgroundId, campgroundName, startDate, retryCount + 1);
+      }
     });
 }
 
