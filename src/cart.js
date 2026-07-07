@@ -1,4 +1,5 @@
-const puppeteer = require('puppeteer-extra');
+const { addExtra } = require('puppeteer-extra');
+const puppeteer = addExtra(require('puppeteer-core'));
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const axios = require('axios');
 const config = require('./config');
@@ -32,7 +33,7 @@ async function connectToExistingBrowser() {
 
 async function checkProceedButton(page) {
   try {
-    await page.waitForSelector('.sarsa-button-content', { timeout: 1000 });
+    await page.waitForSelector('.sarsa-button-content', { timeout: 3000 });
 
     await page.evaluate(() => {
       const elements = document.querySelectorAll('.sarsa-button-content');
@@ -52,87 +53,86 @@ async function checkProceedButton(page) {
 
 async function cart(siteId, date, campgroundName) {
   const browser = await connectToExistingBrowser();
-  const page = await browser.newPage();
+  let page;
 
   const formattedDate = formatDate(date);
 
-  console.log('Adding campsite to cart...');
-
-  await page.goto(`https://www.recreation.gov/camping/campsites/${siteId}`);
-
-  // Simulate scrolling
-  await page.evaluate(() => window.scrollBy(0, window.innerHeight / 2));
-
   try {
-    await page.waitForSelector(`[aria-label="${formattedDate} - Available"]`, { timeout: 1000 });
-    await page.$eval(`[aria-label="${formattedDate} - Available"]`, el => el.click());
-    await page.$eval('[class="calendar-cell is-styled-day checkout"]', el => el.click());
-  } catch (error) {
-    console.log(`Could not select ${formattedDate} on the calendar (it may no longer be available): ${error.message}`);
-  }
+    page = await browser.newPage();
 
-  try {
-    await page.waitForSelector('#add-cart-campsite');
-    await page.$eval('#add-cart-campsite', el => el.click());
-    console.log('Campsite added to cart.');
-  } catch (error) {
-    console.log(`Could not click the "Add to Cart" button: ${error.message}`);
-  }
+    console.log('Adding campsite to cart...');
 
-  await checkProceedButton(page);
+    await page.goto(`https://www.recreation.gov/camping/campsites/${siteId}`);
 
-  try {
-    await page.waitForSelector('#email', { timeout: 1000 });
-    await page.type('#email', config.profile.email);
+    // Simulate scrolling
+    await page.evaluate(() => window.scrollBy(0, window.innerHeight / 2));
 
-    await page.waitForSelector('#password');
-    await page.type('#password', config.profile.password);
+    try {
+      await page.waitForSelector(`[aria-label="${formattedDate} - Available"]`, { timeout: 10000 });
+      await page.$eval(`[aria-label="${formattedDate} - Available"]`, el => el.click());
+      await page.$eval('[class="calendar-cell is-styled-day checkout"]', el => el.click());
+    } catch (error) {
+      console.log(`Could not select ${formattedDate} on the calendar (it may no longer be available): ${error.message}`);
+    }
 
-    await page.waitForSelector('.sarsa-button-content');
-
-    await page.evaluate(() => {
-      const elements = document.querySelectorAll('.sarsa-button-content');
-      for (let element of elements) {
-        if (element.innerText.trim() === 'Log In') {
-          element.click();
-          break;
-        }
-      }
-    });
+    try {
+      await page.waitForSelector('#add-cart-campsite');
+      await page.$eval('#add-cart-campsite', el => el.click());
+      console.log('Campsite added to cart.');
+    } catch (error) {
+      console.log(`Could not click the "Add to Cart" button: ${error.message}`);
+    }
 
     await checkProceedButton(page);
 
     try {
-      await page.waitForSelector('#add-cart-campsite', { timeout: 1500 });
-      await page.$eval('#add-cart-campsite', el => el.click());
-    } catch (error) {
-      console.log(error);
-    }
-  } catch (error) {
-    // #email not appearing within 1s usually means we're already logged in.
-    // Log the reason so a genuine login failure isn't silently masked as "logged in".
-    console.log(`Login form skipped (already logged in, or login failed): ${error.message}`);
-  }
+      await page.waitForSelector('#email', { timeout: 3000 });
+      await page.type('#email', config.profile.email);
 
-  try {
-    await delay(1000);
-  
-    const currentUrl = page.url();
-    if (currentUrl.includes('orderdetails')) {
-      console.log(`Reserved ${campgroundName} for ${formattedDate}.`);
-  
-      if (config.discordWebhook) {
-        sendWebhook(`Reserved ${campgroundName} for ${formattedDate} - Finish checkout at <https://www.recreation.gov/cart>`);
+      await page.waitForSelector('#password');
+      await page.type('#password', config.profile.password);
+
+      await page.waitForSelector('.sarsa-button-content');
+
+      await page.evaluate(() => {
+        const elements = document.querySelectorAll('.sarsa-button-content');
+        for (let element of elements) {
+          if (element.innerText.trim() === 'Log In') {
+            element.click();
+            break;
+          }
+        }
+      });
+
+      await checkProceedButton(page);
+
+      try {
+        await page.waitForSelector('#add-cart-campsite', { timeout: 5000 });
+        await page.$eval('#add-cart-campsite', el => el.click());
+      } catch (error) {
+        console.log(`"Add to Cart" was not shown again after login: ${error.message}`);
       }
-    } else {
-      console.log('Failed to reach the order details page.');
+    } catch (error) {
+      console.log(`Login form skipped (already logged in, or login failed): ${error.message}`);
     }
-  } catch (error) {
-    console.log('Error:', error.message);
-  }
 
-  await delay(3000);
-  await page.close();
+    try {
+      await page.waitForFunction(() => window.location.href.includes('orderdetails'), { timeout: 15000 });
+    } catch (error) {
+      throw new Error('never reached the order details page, so the campsite is likely not in the cart.');
+    }
+
+    console.log(`Reserved ${campgroundName} for ${formattedDate}.`);
+
+    if (config.discordWebhook) {
+      sendWebhook(`Reserved ${campgroundName} for ${formattedDate} - Finish checkout at <https://www.recreation.gov/cart>`);
+    }
+  } finally {
+    if (page) {
+      await page.close().catch(() => {});
+    }
+    browser.disconnect();
+  }
 }
 
 module.exports = {

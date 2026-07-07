@@ -29,9 +29,9 @@ Campster is a campsite reservation helper that monitors and secures available ca
 Proxies are used to reduce the likelihood of hitting rate limits on the API.
 
 1. Open the proxylist.txt file in the main folder.
-2. Enter your proxies, each on a new line.
-3. In the src/config.js file, make sure the proxies field is set to 1 to enable proxy usage.
-4. If you set proxies to 0, the program will not use proxies. This is not recommended for prolonged use as it increases the risk of being rate-limited or blocked.
+2. Enter your proxies, each on a new line, as `host:port` or `host:port:user:pass`.
+3. In the src/config.js file, make sure the proxies field is set to `true` to enable proxy usage.
+4. If you set proxies to `false`, the program will not use proxies. This is not recommended for prolonged use as it increases the risk of being rate-limited or blocked.
 
 ### User Information
 
@@ -41,7 +41,8 @@ You need to provide some personal information for this program to run. All infor
 2. Open `src/config.js` and enter the required information in the appropriate fields.
 3. To get the `campgroundId`, navigate to the campground page on [recreation.gov](https://www.recreation.gov/). The URL will look like `https://www.recreation.gov/camping/campgrounds/123456`. The "123456" part of the URL is the `campgroundId` for that campground.
 4. The `campgroundName` can be any string and is mainly used for logs. It's recommended to use the actual name of the campground to make alerts and logs more readable.
-5. The `startDate` should be in the format `YYYY-MM-DD` and represents the day you plan to reserve. The program will automatically reserve all available days starting from the `startDate`. You can modify these dates once the campground is in the cart.
+5. The `startDate` should be in the format `YYYY-MM-DD` (zero-padded, e.g. `2026-08-01`) and represents the night you plan to reserve. The program carts that night; you can modify the dates once the campsite is in the cart.
+6. `targetSites` (optional) is a list of specific site numbers to snipe within the campground, e.g. `["A01"]`. Enter them as they appear on the recreation.gov campground map. Matching is tolerant of the labeling differences between campgrounds: case, punctuation, and leading zeros are ignored (`"a1"` matches `A01`), type prefixes are ignored (`"12"` matches `TENT NONELECTRIC 012`), and loop letters work whether the campground stores them in the site name or in a separate loop field (`"A01"` matches site `001` in loop `A`). If `targetSites` is omitted or empty, the program reserves any open site in the campground, as before.
 
 ## Starting
 

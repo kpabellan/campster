@@ -7,20 +7,11 @@ const config = {
     {
       "campgroundId": "232447", // Campground ID
       "campgroundName": "Upper Pines", // Campground name
-      "startDate": "2026-08-01" // Target date in format YYYY-MM-DD (must be in the future)
-    },
-    {
-      "campgroundId": "232450",
-      "campgroundName": "Lower Pines",
-      "startDate": "2026-08-01"
-    },
-    {
-      "campgroundId": "232449",
-      "campgroundName": "North Pines",
-      "startDate": "2026-08-11"
+      "startDate": "2026-08-01", // Target date in format YYYY-MM-DD (must be in the future)
+      "targetSites": ["A01"] // Optional: only snipe these specific sites. Omit or leave empty to reserve any open site.
     }
   ],
-  "proxies": 1, // Set to 0 to disable proxies (not recommended)
+  "proxies": true, // Set to false to disable proxies (not recommended)
   "proxyAuth": { // Shared credentials for proxies that require authentication (leave blank if none, or if creds are embedded per-line in proxylist.txt as host:port:user:pass)
     "username": "",
     "password": ""

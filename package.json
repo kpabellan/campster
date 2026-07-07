@@ -2,17 +2,20 @@
   "name": "campster",
   "version": "1.0.0",
   "description": "",
-  "main": "main.js",
+  "main": "src/monitor.js",
   "scripts": {
-    "start": "node src/monitor.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/monitor.js"
   },
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "axios": "^1.8.2",
-    "puppeteer": "^24.4.0",
+    "https-proxy-agent": "^7.0.6",
+    "puppeteer-core": "^24.4.0",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2"
+  },
+  "overrides": {
+    "rimraf": "^6.0.1"
   }
 }
